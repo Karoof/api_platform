@@ -34,7 +34,7 @@ class Set
     private $number;
 
     /**
-     * @ORM\ManyToOne(targetEntity=Exercise::class, inversedBy="Progressions")
+     * @ORM\ManyToOne(targetEntity=Exercise::class, inversedBy="sets")
      */
     private $exercise;
 
@@ -42,6 +42,11 @@ class Set
      * @ORM\OneToMany(targetEntity=Rep::class, mappedBy="progression")
      */
     private $reps;
+
+    /**
+     * @ORM\Column(type="datetime")
+     */
+    private $createdAt;
 
     public function __construct()
     {
@@ -104,6 +109,18 @@ class Set
                 $rep->setProgression(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getCreatedAt(): ?\DateTimeInterface
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(\DateTimeInterface $createdAt): self
+    {
+        $this->createdAt = $createdAt;
 
         return $this;
     }

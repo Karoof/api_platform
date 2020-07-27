@@ -2,17 +2,32 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Core\Annotation\ApiFilter;
 use ApiPlatform\Core\Annotation\ApiResource;
 use App\Repository\ExerciseRepository;
+use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\BooleanFilter;
+use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Core\Serializer\Filter\PropertyFilter;
+use Carbon\Carbon;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Annotation\SerializedName;
 
 /**
  * @ApiResource(
- *     normalizationContext={"groups"="exercise:read"}
+ *     normalizationContext={"groups"={"exercise:read"}, "swagger_definition_name"="Read"},
+ *     denormalizationContext={"groups"={"exercise:write"}, "swagger_definition_name"="Write"},
+ *     attributes={
+ *         "pagination_items_per_page"=10,
+ *         "formats"={"jsonld", "json", "html", "jsonhal", "csv"={"text/csv"}}
+ *     }
  * )
  * @ORM\Entity(repositoryClass=ExerciseRepository::class)
+ * @ApiFilter(BooleanFilter::class, properties={"isFinished"})
+ * @ApiFilter(SearchFilter::class, properties={"title": "partial", "description": "partial"})
+ * @ApiFilter(PropertyFilter::class)
  */
 class Exercise
 {
@@ -25,6 +40,7 @@ class Exercise
 
     /**
      * @ORM\Column(type="string", length=255)
+     * @Groups({"exercise:read", "exercise:write"})
      */
     private $title;
 
@@ -38,9 +54,23 @@ class Exercise
      */
     private $description;
 
-    public function __construct()
+    /**
+     * @ORM\Column(type="datetime")
+     * @Groups({"exercise:read"})
+     */
+    private $createdAt;
+
+    /**
+     * @ORM\Column(type="boolean")
+     * @Groups({"exercise:read", "exercise:write"})
+     */
+    private $isFinished = false;
+
+    public function __construct(string $title)
     {
         $this->sets = new ArrayCollection();
+        $this->createdAt = new \DateTimeImmutable();
+        $this->title = $title;
     }
 
     public function getId(): ?int
@@ -51,13 +81,6 @@ class Exercise
     public function getTitle(): ?string
     {
         return $this->title;
-    }
-
-    public function setTitle(string $title): self
-    {
-        $this->title = $title;
-
-        return $this;
     }
 
     /**
@@ -96,9 +119,63 @@ class Exercise
         return $this->description;
     }
 
+    /**
+     * Gets description.
+     *
+     * @Groups({"exercise:read"})
+     */
+    public function getShortDescription(): ?string
+    {
+        if (strlen(strip_tags($this->description)) < 40) {
+            return $this->description;
+        }
+
+        return substr(strip_tags($this->description), 0, 40) . '...';
+    }
+
+    public function setDescription(?string $description): self
+    {
+        $this->description = $description;
+
+        return $this;
+    }
+
+    /**
+     * Sets description.
+     *
+     * @Groups({"exercise:write"})
+     * @SerializedName("description")
+     */
     public function setTextDescription(?string $description): self
     {
         $this->description = nl2br($description);
+
+        return $this;
+    }
+
+    public function getCreatedAt(): ?\DateTimeInterface
+    {
+        return $this->createdAt;
+    }
+
+    /**
+     * String of created at.
+     *
+     * @Groups({"exercise:read"})
+     */
+    public function getCreatedAtAgo(): ?string
+    {
+        return Carbon::instance($this->getCreatedAt())->diffForHumans();
+    }
+
+    public function getIsFinished(): ?bool
+    {
+        return $this->isFinished;
+    }
+
+    public function setIsFinished(bool $isFinished): self
+    {
+        $this->isFinished = $isFinished;
 
         return $this;
     }
