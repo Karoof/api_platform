@@ -7,9 +7,13 @@ use ApiPlatform\Core\Annotation\ApiResource;
 use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\RangeFilter;
 use App\Repository\RepRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 /**
- * @ApiResource()
+ * @ApiResource(
+ *     normalizationContext={"groups"={"rep:read"}},
+ *     denormalizationContext={"groups"={"rep:write"}},
+ * )
  * @ORM\Entity(repositoryClass=RepRepository::class)
  * @ApiFilter(RangeFilter::class, properties={"number"})
  */
@@ -24,16 +28,19 @@ class Rep
 
     /**
      * @ORM\Column(type="integer")
+     * @Groups({"rep:read", "rep:write", "exercise:read"})
      */
     private $number;
 
     /**
      * @ORM\Column(type="integer")
+     * @Groups({"rep:read", "rep:write"})
      */
     private $weight;
 
     /**
      * @ORM\ManyToOne(targetEntity=Set::class, inversedBy="reps")
+     * @Groups({"rep:read", "rep:write"})
      */
     private $progression;
 
@@ -41,6 +48,11 @@ class Rep
      * @ORM\Column(type="datetime")
      */
     private $createdAt;
+
+    public function __construct()
+    {
+        $this->createdAt = new \DateTimeImmutable();
+    }
 
     public function getId(): ?int
     {
@@ -86,12 +98,5 @@ class Rep
     public function getCreatedAt(): ?\DateTimeInterface
     {
         return $this->createdAt;
-    }
-
-    public function setCreatedAt(\DateTimeInterface $createdAt): self
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
     }
 }

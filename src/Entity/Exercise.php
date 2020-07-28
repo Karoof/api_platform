@@ -27,7 +27,10 @@ use Symfony\Component\Validator\Constraints as Assert;
  * )
  * @ORM\Entity(repositoryClass=ExerciseRepository::class)
  * @ApiFilter(BooleanFilter::class, properties={"isFinished"})
- * @ApiFilter(SearchFilter::class, properties={"title": "partial", "description": "partial"})
+ * @ApiFilter(SearchFilter::class, properties={
+ *     "title": "partial",
+ *     "description": "partial"
+ * })
  * @ApiFilter(PropertyFilter::class)
  */
 class Exercise
@@ -41,7 +44,7 @@ class Exercise
 
     /**
      * @ORM\Column(type="string", length=255)
-     * @Groups({"exercise:read", "exercise:write"})
+     * @Groups({"exercise:read", "exercise:write", "set:item:get", "set:write"})
      * @Assert\NotBlank()
      * @Assert\Length(
      *     min=2,
@@ -52,12 +55,14 @@ class Exercise
     private $title;
 
     /**
-     * @ORM\OneToMany(targetEntity=Set::class, mappedBy="exercise")
+     * @ORM\OneToMany(targetEntity=Set::class, mappedBy="exercise", cascade={"persist"}, orphanRemoval=true)
+     * @Groups({"exercise:read", "exercise:write"})
      */
     private $sets;
 
     /**
      * @ORM\Column(type="string", length=255, nullable=true)
+     * @Groups({"exercise:read", "exercise:write"})
      * @Assert\NotBlank()
      */
     private $description;

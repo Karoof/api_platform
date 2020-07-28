@@ -3,20 +3,26 @@
 namespace App\Entity;
 
 use ApiPlatform\Core\Annotation\ApiResource;
-use App\Repository\ProgressionRepository;
+use App\Repository\SetRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * @ApiResource(
- *     collectionOperations={"get", "post"},
  *     itemOperations={
- *         "get"={"path"="/api/getset/{id}"}, 
- *         "put"
- *     }
+ *          "get"={
+ *              "normalization_context"={"groups"={"set:read", "set:item:get"}},
+ *          },
+ *          "put"
+ *     },
+ *     normalizationContext={"groups"={"set:read"}},
+ *     denormalizationContext={"groups"={"set:write"}},
+ *     collectionOperations={"get", "post"},
  * )
- * @ORM\Entity(repositoryClass=setRepository::class)
+ * @ORM\Entity(repositoryClass=SetRepository::class)
  * @ORM\Table(name="`set`")
  */
 class Set
@@ -30,16 +36,21 @@ class Set
 
     /**
      * @ORM\Column(type="integer")
+     * @Groups({"set:read", "set:write", "exercise:read", "exercise:write"})
+     * @Assert\NotBlank()
      */
     private $number;
 
     /**
      * @ORM\ManyToOne(targetEntity=Exercise::class, inversedBy="sets")
+     * @Groups({"set:read", "set:write"})
+     * @Assert\Valid()
      */
     private $exercise;
 
     /**
      * @ORM\OneToMany(targetEntity=Rep::class, mappedBy="progression")
+     * @Groups({"set:read","exercise:read"})
      */
     private $reps;
 
@@ -51,6 +62,7 @@ class Set
     public function __construct()
     {
         $this->reps = new ArrayCollection();
+        $this->createdAt = new \DateTimeImmutable();
     }
 
     public function getId(): ?int
@@ -116,12 +128,5 @@ class Set
     public function getCreatedAt(): ?\DateTimeInterface
     {
         return $this->createdAt;
-    }
-
-    public function setCreatedAt(\DateTimeInterface $createdAt): self
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
     }
 }
