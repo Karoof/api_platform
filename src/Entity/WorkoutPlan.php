@@ -14,6 +14,11 @@ use Symfony\Component\Serializer\Annotation\Groups;
 
 /**
  * @ApiResource(
+ *     collectionOperations={
+ *         "get",
+ *         "post"={"security"="is_granted('ROLE_USER')"},
+ *         "delete"={"security"="is_granted('ROLE_ADMIN')"}
+ *     },
  *     normalizationContext={"groups"={"workoutplan:read"}},
  *     denormalizationContext={"groups"={"workoutplan:write"}}
  * )
