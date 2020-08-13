@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use ApiPlatform\Core\Annotation\ApiResource;
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -13,6 +15,15 @@ use Symfony\Component\Validator\Constraints as Assert;
 /**
  * @ORM\Entity(repositoryClass=UserRepository::class)
  * @ApiResource(
+ *     collectionOperations={
+ *          "get",
+ *          "post"={"access_control"="is_granted('IS_AUTHENTICATED_ANONYMOUSLY')"}
+ *     },
+ *     itemOperations={
+ *          "get",
+ *          "put"={"access_control"="is_granted('ROLE_USER') or object == user"},
+ *          "delete"={"access_control"="is_granted('ROLE_ADMIN')"}
+ *     },
  *     normalizationContext={"groups"={"user:read"}},
  *     denormalizationContext={"groups"={"user:write"}},
  * )
@@ -54,6 +65,22 @@ class User implements UserInterface
      * @Assert\NotBlank()
      */
     private $username;
+
+    /**
+     * @ORM\ManyToMany(targetEntity=WorkoutPlan::class, mappedBy="users")
+     */
+    private $workoutPlans;
+
+    /**
+     * @ORM\OneToMany(targetEntity=WorkoutPlan::class, mappedBy="owner")
+     */
+    private $ownerWorkoutPlans;
+
+    public function __construct()
+    {
+        $this->workoutPlans = new ArrayCollection();
+        $this->ownerWorkoutPlans = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -136,6 +163,65 @@ class User implements UserInterface
     public function setUsername(string $username): self
     {
         $this->username = $username;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection|WorkoutPlan[]
+     */
+    public function getWorkoutPlans(): Collection
+    {
+        return $this->workoutPlans;
+    }
+
+    public function addWorkoutPlan(WorkoutPlan $workoutPlan): self
+    {
+        if (!$this->workoutPlans->contains($workoutPlan)) {
+            $this->workoutPlans[] = $workoutPlan;
+            $workoutPlan->addUser($this);
+        }
+
+        return $this;
+    }
+
+    public function removeWorkoutPlan(WorkoutPlan $workoutPlan): self
+    {
+        if ($this->workoutPlans->contains($workoutPlan)) {
+            $this->workoutPlans->removeElement($workoutPlan);
+            $workoutPlan->removeUser($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection|WorkoutPlan[]
+     */
+    public function getOwnerWorkoutPlans(): Collection
+    {
+        return $this->ownerWorkoutPlans;
+    }
+
+    public function addOwnerWorkoutPlan(WorkoutPlan $ownerWorkoutPlan): self
+    {
+        if (!$this->ownerWorkoutPlans->contains($ownerWorkoutPlan)) {
+            $this->ownerWorkoutPlans[] = $ownerWorkoutPlan;
+            $ownerWorkoutPlan->setOwner($this);
+        }
+
+        return $this;
+    }
+
+    public function removeOwnerWorkoutPlan(WorkoutPlan $ownerWorkoutPlan): self
+    {
+        if ($this->ownerWorkoutPlans->contains($ownerWorkoutPlan)) {
+            $this->ownerWorkoutPlans->removeElement($ownerWorkoutPlan);
+            // set the owning side to null (unless already changed)
+            if ($ownerWorkoutPlan->getOwner() === $this) {
+                $ownerWorkoutPlan->setOwner(null);
+            }
+        }
 
         return $this;
     }

@@ -11,13 +11,13 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use ApiPlatform\Core\Bridge\Doctrine\Orm\Filter\SearchFilter;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * @ApiResource(
  *     collectionOperations={
- *         "get",
- *         "post"={"security"="is_granted('ROLE_USER')"},
- *         "delete"={"security"="is_granted('ROLE_ADMIN')"}
+ *         "get"={"security"="is_granted('ROLE_USER')"},
+ *         "post"={"security"="is_granted('ROLE_USER') or previous_object.getOwner() == user","security_message"="Only owner can edit workout plan."},
  *     },
  *     normalizationContext={"groups"={"workoutplan:read"}},
  *     denormalizationContext={"groups"={"workoutplan:write"}}
@@ -42,6 +42,7 @@ class WorkoutPlan
     /**
      * @ORM\Column(type="string", length=255)
      * @Groups({"workoutplan:read", "workoutplan:write"})
+     * @Assert\NotBlank()
      */
     private $title;
 
@@ -57,9 +58,21 @@ class WorkoutPlan
      */
     private $exercise;
 
+    /**
+     * @ORM\ManyToMany(targetEntity=User::class, inversedBy="workoutPlans")
+     */
+    private $users;
+
+    /**
+     * @ORM\ManyToOne(targetEntity=User::class, inversedBy="ownerWorkoutPlans")
+     * @Groups({"workoutplan:read", "workoutplan:write"})
+     */
+    private $owner;
+
     public function __construct()
     {
         $this->exercise = new ArrayCollection();
+        $this->users = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -113,6 +126,44 @@ class WorkoutPlan
         if ($this->exercise->contains($exercise)) {
             $this->exercise->removeElement($exercise);
         }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection|User[]
+     */
+    public function getUsers(): Collection
+    {
+        return $this->users;
+    }
+
+    public function addUser(User $user): self
+    {
+        if (!$this->users->contains($user)) {
+            $this->users[] = $user;
+        }
+
+        return $this;
+    }
+
+    public function removeUser(User $user): self
+    {
+        if ($this->users->contains($user)) {
+            $this->users->removeElement($user);
+        }
+
+        return $this;
+    }
+
+    public function getOwner(): ?User
+    {
+        return $this->owner;
+    }
+
+    public function setOwner(?User $owner): self
+    {
+        $this->owner = $owner;
 
         return $this;
     }
